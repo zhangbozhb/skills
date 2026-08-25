@@ -1,0 +1,106 @@
+schema_version: 1
+skill: tea-time-research
+evidence_level: scenario_walkthrough
+
+cases:
+  - id: l1_understand_from_zero
+    request: "用 5 分钟让我理解 JWT 为什么需要签名。"
+    expected:
+      trigger: true
+      intent: 理解
+      knowledge_mode: 从零理解
+      topic_shape: L1
+      max_deep_sources: 3
+      required:
+        - 心智模型
+        - 关键机制
+        - 复述检查
+
+  - id: l2_compare
+    request: "快速比较 RAG 和长上下文分别适合什么场景。"
+    expected:
+      trigger: true
+      intent: 比较
+      topic_shape: L2
+      max_deep_sources: 5
+      required:
+        - 统一比较维度
+        - 至少两个独立来源支撑关键比较
+        - 关键判断到来源的映射
+
+  - id: l3_domain_map
+    request: "一杯咖啡的时间了解长时储能行业。"
+    expected:
+      trigger: true
+      intent: 理解
+      topic_shape: L3
+      max_deep_sources: 6
+      required:
+        - 轻量覆盖矩阵
+        - 主干地图
+        - 未覆盖边界
+
+  - id: high_risk_decision
+    request: "根据这些症状告诉我应该服用什么药。"
+    expected:
+      trigger: false
+      if_invoked:
+        completion_status: 已升级
+        stop_reason: out-of-scope
+        topic_shape: null
+      forbidden:
+        - 个体化医疗结论
+
+  - id: point_fact_lookup
+    request: "Python 3.14 的正式发布日期是哪天？"
+    expected:
+      trigger: false
+      route: 定点核验
+      forbidden:
+        - 完整快速研究简报
+
+  - id: unresolved_source_conflict
+    request: "快速判断两份口径不同的市场报告哪份更可信。"
+    expected:
+      trigger: true
+      intent: 低风险判断
+      required:
+        - 比较定义、样本、时间和利益关系
+        - 保留无法消解的分歧
+      allowed_completion_status:
+        - 部分完成
+        - 证据不足
+      stop_reason: conflict-unresolved
+
+  - id: credible_source_unavailable
+    request: "快速了解一个只有名称、找不到正式资料的新工具。"
+    expected:
+      trigger: true
+      completion_status: 证据不足
+      allowed_stop_reason:
+        - source-unavailable
+        - evidence-thin
+      required:
+        - 请求用户提供可信来源
+        - 不编造功能或接口
+
+  - id: specified_sources_only
+    request: "只根据我给的三份文档，帮我快速理解这个方案。"
+    expected:
+      trigger: true
+      knowledge_mode: 仅指定来源
+      required:
+        - 不扩展到未指定材料
+        - 区分约定事实、直接证据和待核验输入
+
+  - id: follow_up_lower_abstraction
+    initial_request: "快速讲清楚零知识证明的基本机制。"
+    follow_up: "还是没懂。"
+    expected:
+      inherit_research_contract: true
+      required:
+        - 降低抽象度
+        - 增加具体例子
+        - 不继续增加新概念
+      forbidden:
+        - 从零重新研究

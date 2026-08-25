@@ -1,0 +1,121 @@
+schema_version: 1
+
+domains:
+  reasoning:
+    label: 推理与设计
+    description: 收敛问题、设计方案并审核结构性定义。
+  orchestration:
+    label: 工作编排
+    description: 维护复杂任务的目标、状态、节点和验证闭环。
+  communication:
+    label: 沟通表达
+    description: 面向具体对象重组短消息和口头话术。
+  research:
+    label: 研究与学习
+    description: 在受控时间和证据预算内建立领域认知。
+  agent-engineering:
+    label: Agent 工程
+    description: 评估 agent 与 harness 的架构、可靠性、安全和运营成熟度。
+  skill-engineering:
+    label: Skill 工程
+    description: 审查并优化 Skill 的触发、执行和文档质量。
+
+skills:
+  - name: problem-solution-design
+    path: problem-solution-design/SKILL.md
+    domain: reasoning
+    role: specialist
+    invocation:
+      user: true
+      model: true
+    summary: 将模糊问题或设计争议收敛为可验证、可实施的解决方案。
+    uses: []
+    routes_to:
+      - definition-audit
+
+  - name: definition-audit
+    path: definition-audit/SKILL.md
+    domain: reasoning
+    role: specialist
+    invocation:
+      user: true
+      model: true
+    summary: 审核已成文的分类、协议、schema、契约和判据规则。
+    uses: []
+    routes_to:
+      - problem-solution-design
+      - skill-optimizer
+
+  - name: tea-time-research
+    path: tea-time-research/SKILL.md
+    domain: research
+    role: specialist
+    invocation:
+      user: true
+      model: true
+    summary: 在固定时间盒内按使用意图、topic 形态、目标读者和证据条件快速研究。
+    uses: []
+    routes_to:
+      - deep-research
+
+  - name: deep-research
+    path: deep-research/SKILL.md
+    domain: research
+    role: specialist
+    invocation:
+      user: true
+      model: true
+    summary: 对复杂问题执行多轮、可审计的桌面研究并交付主张级证据链。
+    uses: []
+    routes_to:
+      - tea-time-research
+
+  - name: goal-driven-workflow
+    path: goal-driven-workflow/SKILL.md
+    domain: orchestration
+    role: orchestrator
+    invocation:
+      user: true
+      model: true
+    summary: 编排需要持续维护目标与状态的复杂任务。
+    uses:
+      - problem-solution-design
+      - definition-audit
+      - skill-optimizer
+    routes_to: []
+
+  - name: communication-rewriter
+    path: communication-rewriter/SKILL.md
+    domain: communication
+    role: specialist
+    invocation:
+      user: true
+      model: true
+    summary: 根据沟通对象、场景和目的重组短消息与口头话术。
+    uses: []
+    routes_to: []
+
+  - name: agent-harness-review
+    path: agent-harness-review/SKILL.md
+    domain: agent-engineering
+    role: specialist
+    invocation:
+      user: true
+      model: true
+    summary: 评估 agent 与 harness 的机制策略分界、异常工程和成熟度缺口。
+    uses: []
+    routes_to:
+      - problem-solution-design
+
+  - name: skill-optimizer
+    path: skill-optimizer/SKILL.md
+    domain: skill-engineering
+    role: specialist
+    invocation:
+      user: true
+      model: true
+    summary: 审查并优化已有 Skill 的触发、路径、边界、定义和结构。
+    uses: []
+    routes_to:
+      - problem-solution-design
+      - definition-audit
