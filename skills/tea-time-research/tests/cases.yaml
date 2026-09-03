@@ -13,8 +13,11 @@ cases:
       max_deep_sources: 3
       required:
         - 心智模型
+        - 具体类比起步
         - 关键机制
         - 复述检查
+      forbidden:
+        - 用未核验的模型解释代替取证
 
   - id: l2_compare
     request: "快速比较 RAG 和长上下文分别适合什么场景。"
@@ -103,4 +106,16 @@ cases:
         - 增加具体例子
         - 不继续增加新概念
       forbidden:
+        - 从零重新研究
+
+  - id: follow_up_socratic_practice
+    initial_request: "快速理解 CAP 定理。"
+    follow_up: "考考我吧。"
+    expected:
+      inherit_research_contract: true
+      required:
+        - 由浅入深的场景题
+        - 作答后指出漏洞并追问引导
+      forbidden:
+        - 直接给出标准答案
         - 从零重新研究
