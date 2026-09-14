@@ -68,9 +68,32 @@ tea-time-research <────── routes_to ──> deep-research
 
 ## 维护规则
 
-1. 新增或调整 Skill 时，同步更新 `skills/catalog.yaml` 和本地图。
+1. 新增 Skill，或调整名称、路径、领域、角色及组合关系时，同步更新 `skills/catalog.yaml` 和本地图；仅修改内部规则且条目仍准确时不制造清单改动。
 2. `name` 保持全局唯一；领域目录不参与触发，也不构成名称前缀。
 3. 可复用能力通过明确的 Skill 调用组合，不通过复制正文或跨目录深层引用复用。
 4. 编排器负责主流程和状态，专项 Skill 负责单一领域判断或动作。
 5. 高副作用操作的确认、安全和隔离门槛不能被编排器绕过。
 6. 当前源码和安装目录保持平铺；确认运行时支持递归发现并具备迁移收益后，再考虑调整物理目录。
+
+## 安装
+
+运行 [安装脚本](scripts/install.sh) 时，脚本从当前目录发现 Skill：若存在 `./skills/` 则优先使用该目录；若当前目录本身包含 `SKILL.md`，则安装该单个 Skill；否则扫描当前目录的直接子目录。默认安装到 `~/.claude/skills`，可使用 `--agent` 或 `--target` 指定其它目标：
+
+```sh
+./scripts/install.sh --help
+./scripts/install.sh --list
+./scripts/install.sh --agent trae-cn
+```
+
+## 维护验证
+
+在仓库根目录使用 Ruby 2.6+ 及其标准库执行，无需额外安装依赖：
+
+```sh
+ruby --disable-gems scripts/check_skills.rb
+```
+
+- [结构检查](scripts/check_skills.rb)：校验本库 frontmatter、YAML 重复键、清单、`uses` 无环性、行内 Markdown 本地链接与标题锚点，以及各 skill 内现有专项场景的字段、唯一 ID 与输入完整性。不联网，不执行 skill 业务流程。
+- [快速研究专项场景](skills/tea-time-research/tests/cases.yaml)：覆盖研究预算、来源限制、后续追问和风险准入。
+
+结构检查通过只证明文件和声明一致。场景需逐条人工或模型走查；只有在真实路由器与执行环境中实测，才能声称触发或执行效果已经验证。安装、全局更新和真实业务调用不属于上述检查。

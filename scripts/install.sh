@@ -1,37 +1,43 @@
 #!/bin/sh
 #
-# install.sh — 把本仓库的 Skill 安装到目标 skills 目录。
+# install.sh — 把当前目录发现的 Skill 安装到目标 skills 目录。
 #
-# 每个 Skill 是 skills/<name>/ 下的一个目录（至少包含 SKILL.md，
-# 可能还有 references/、tests/ 等）。安装即把整个目录平铺复制（或软链）
-# 到目标安装目录，保持 README 中约定的平铺结构。
+# 每个 Skill 是一个至少包含 SKILL.md 的目录，可能还有 references/、
+# tests/ 等。安装即把整个目录平铺复制（或软链）到目标安装目录。
 #
-# 用法:
-#   ./install.sh                      安装全部 Skill 到默认目录 (~/.claude/skills)
-#   ./install.sh deep-research ...    只安装指定的 Skill
-#   ./install.sh --update ...        更新目标目录里已安装的 Skill 到仓库最新版
-#                                    （不加名字=更新全部已安装；跳过内容未变化的）
-#   ./install.sh --list              列出仓库内可安装的 Skill
-#   ./install.sh --agent NAME ...    安装/更新到指定 coding agent 的 skills 目录
-#                                    NAME: claude | codex | trae-cn（--list-agents 查看）
-#   ./install.sh --list-agents       列出内置的 agent 及其安装目录
-#   ./install.sh --target DIR ...    指定安装目录（优先级最高）
-#   ./install.sh --link ...          用软链接代替复制（开发时便于实时编辑）
-#   ./install.sh --dry-run ...       只打印将要执行的操作，不落盘
-#   ./install.sh --force ...         覆盖已存在的同名 Skill 时不再询问
-#   ./install.sh --help
+# 用法（在待安装 Skill 所在目录执行）:
+#   /path/to/install.sh                      安装全部 Skill 到默认目录 (~/.claude/skills)
+#   /path/to/install.sh deep-research ...    只安装指定的 Skill
+#   /path/to/install.sh --update ...        更新目标目录里已安装的 Skill 到最新版
+#                                           （不加名字=更新全部已安装；跳过内容未变化的）
+#   /path/to/install.sh --list              列出当前目录可安装的 Skill
+#   /path/to/install.sh --agent NAME ...    安装/更新到指定 coding agent 的 skills 目录
+#                                           NAME: claude | codex | trae-cn（--list-agents 查看）
+#   /path/to/install.sh --list-agents       列出内置的 agent 及其安装目录
+#   /path/to/install.sh --target DIR ...    指定安装目录（优先级最高）
+#   /path/to/install.sh --link ...          用软链接代替复制（开发时便于实时编辑）
+#   /path/to/install.sh --dry-run ...       只打印将要执行的操作，不落盘
+#   /path/to/install.sh --force ...         覆盖已存在的同名 Skill 时不再询问
+#   /path/to/install.sh --help
 #
+# 源目录: 当前目录下有 skills/ 时使用 ./skills；当前目录本身包含
+# SKILL.md 时安装该单个 Skill；否则扫描当前目录的直接子目录。
 # 目标目录解析顺序: --target > --agent > $SKILLS_DIR > 默认(~/.claude/skills)
 #
 # 本脚本只用 POSIX sh 语法，可用 sh / dash / bash 运行：
-#   sh install.sh ...   或   ./install.sh ...   或   bash install.sh ...
+#   sh /path/to/install.sh ...   或   /path/to/install.sh ...   或   bash /path/to/install.sh ...
 #
 set -eu
 
-# ---- 定位仓库内的 skills 源目录 --------------------------------------------
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+# ---- 定位脚本和当前工作目录内的 Skill 源 ----------------------------------
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd -P)
 SELF="$SCRIPT_DIR/$(basename "$0")"
-SRC_DIR="$SCRIPT_DIR/skills"
+WORK_DIR=$(pwd -P)
+if [ -d "$WORK_DIR/skills" ]; then
+  SRC_DIR=$(cd "$WORK_DIR/skills" && pwd -P)
+else
+  SRC_DIR="$WORK_DIR"
+fi
 
 # ---- 内置 coding agent 的 skills 安装目录 ----------------------------------
 # 各 agent 约定的 skills 目录（惯例为 ~/.<agent>/skills）。
@@ -65,7 +71,7 @@ err()   { printf 'ERROR: %s\n' "$*" >&2; }
 die()   { err "$*"; exit 1; }
 
 usage() {
-  sed -n '3,24p' "$SELF" | sed 's/^# \{0,1\}//'
+  sed -n '3,26p' "$SELF" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -75,15 +81,29 @@ list_count() {
   printf '%s\n' "$1" | grep -c .
 }
 
-# ---- 发现仓库内所有 Skill（目录名 = Skill 名，需含 SKILL.md）---------------
+# ---- 发现源目录内所有 Skill（目录名 = Skill 名，需含 SKILL.md）-------------
 discover_skills() {
   [ -d "$SRC_DIR" ] || die "找不到 skills 源目录: $SRC_DIR"
+  if [ -f "$SRC_DIR/SKILL.md" ]; then
+    basename "$SRC_DIR"
+    return
+  fi
   for _d in "$SRC_DIR"/*/; do
     [ -d "$_d" ] || continue
     _name=$(basename "$_d")
     [ -f "$_d/SKILL.md" ] || continue   # 没有 SKILL.md 的目录不是 Skill
     printf '%s\n' "$_name"
   done
+}
+
+# ---- 获取 Skill 对应的源路径 -----------------------------------------------
+skill_source() {
+  if [ -f "$SRC_DIR/SKILL.md" ]; then
+    [ "$(basename "$SRC_DIR")" = "$1" ] || return 1
+    printf '%s\n' "$SRC_DIR"
+  else
+    printf '%s\n' "$SRC_DIR/$1"
+  fi
 }
 
 # ---- 判断某个 Skill 是否已安装在目标目录（普通目录或软链均算）--------------
@@ -214,7 +234,7 @@ fi
 # 解析目标绝对路径（软链需要绝对源路径才稳妥）
 TARGET_ABS="$TARGET"
 if [ "$DRY_RUN" -eq 0 ]; then
-  TARGET_ABS=$(cd "$TARGET" && pwd)
+  TARGET_ABS=$(cd "$TARGET" && pwd -P)
 fi
 
 installed=0
@@ -222,9 +242,12 @@ updated=0
 skipped=0
 while IFS= read -r name; do
   [ -n "$name" ] || continue
-  src="$SRC_DIR/$name"
+  src=$(skill_source "$name")
   dst="$TARGET_ABS/$name"
-  src_abs=$(cd "$src" && pwd)
+  src_abs=$(cd "$src" && pwd -P)
+  if [ "$src_abs" = "$dst" ]; then
+    info "源与目标相同，跳过 $name"; skipped=$((skipped + 1)); continue
+  fi
   exists=0
   if [ -e "$dst" ] || [ -L "$dst" ]; then exists=1; fi
 

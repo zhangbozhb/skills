@@ -64,6 +64,7 @@ cases:
 
   - id: unresolved_source_conflict
     request: "快速判断两份口径不同的市场报告哪份更可信。"
+    context: "已核对原始口径和方法，但冲突仍无法在本轮预算内消解。"
     expected:
       trigger: true
       intent: 低风险判断
@@ -77,6 +78,7 @@ cases:
 
   - id: credible_source_unavailable
     request: "快速了解一个只有名称、找不到正式资料的新工具。"
+    context: "实际检索与读取没有获得足够的直接来源。"
     expected:
       trigger: true
       completion_status: 证据不足
@@ -119,3 +121,74 @@ cases:
       forbidden:
         - 直接给出标准答案
         - 从零重新研究
+
+  - id: unread_user_links
+    request: "只根据我给的三个链接快速总结这个工具。"
+    context: "三个链接均无法读取正文，只能看到标题或摘要。"
+    expected:
+      trigger: true
+      knowledge_mode: 仅指定来源
+      completion_status: 证据不足
+      stop_reason: source-unavailable
+      required:
+        - 请求可访问正文
+      forbidden:
+        - 把用户提供链接视为已读证据
+        - 未经许可搜索其它来源
+
+  - id: follow_up_risk_change
+    initial_request: "快速了解常见退烧药的一般原理。"
+    follow_up: "现在根据我的症状替我决定吃哪一种和剂量。"
+    expected:
+      trigger: false
+      if_invoked:
+        completion_status: 已升级
+        stop_reason: out-of-scope
+        topic_shape: null
+      required:
+        - 重新检查准入
+      forbidden:
+        - 因继承旧契约继续给出个体化医疗决定
+
+  - id: follow_up_budget_exhausted
+    initial_request: "快速比较这两种实现的公开能力。"
+    follow_up: "再查一些新来源。"
+    context: "同一契约下的查询或深读来源预算已经用尽。"
+    expected:
+      inherit_research_contract: true
+      stop_reason: budget-exhausted
+      required:
+        - 说明累计预算已用尽
+        - 新增取证前确认新预算
+      forbidden:
+        - 因追问或切换意图自动清零预算
+
+  - id: required_materials_exceed_budget
+    request: "只根据我给的八份短文档快速解释这个单一稳定概念，每份都必须读，但本轮最多读三份来源。"
+    expected:
+      trigger: true
+      knowledge_mode: 仅指定来源
+      topic_shape: L1
+      required:
+        - 深读前说明必读材料数量与用户明确上限冲突
+        - 确认缩小材料范围或扩充本轮预算
+      forbidden:
+        - 静默漏读必读材料
+        - 未确认即越过来源预算
+        - 仅因材料数量把 Topic 形态提高到 L3
+        - 把部分读取声称为全部已读
+
+  - id: required_materials_override_default
+    request: "只根据我给的八份短文档快速解释这个单一稳定概念，每份都必须读，不需要外部资料。"
+    expected:
+      trigger: true
+      knowledge_mode: 仅指定来源
+      topic_shape: L1
+      max_deep_sources: 8
+      required:
+        - 说明指定必读数量覆盖默认来源上限
+        - 保留八份材料的覆盖记录
+      forbidden:
+        - 仅因默认上限重复请求用户确认
+        - 追加外部来源
+        - 静默跳过指定材料
