@@ -87,6 +87,7 @@ artifacts:
 - `substantiated` 对应“证据充分”，`qualified` 对应“有条件完成”
 - `partial`、`insufficient`、`blocked` 分别对应“部分完成”“证据不足”“已阻塞”；`active` 只表示研究进行中
 - `phase: delivered` 不得同时为 `completion: active`；已交付部分结果不代表全部问题已完成
+- `artifacts` 模板展示候选路径，实际只登记已成功落盘的文件；报告尚未生成时省略 `report`，不把计划产物当成已有档案
 - 不把长篇研究内容塞进 YAML
 - `next_action` 必须具体到下一步要回答或核验的问题
 
@@ -120,7 +121,7 @@ artifacts:
 - 一手研究边界：
 
 ## 预算与检查点
-- 时间/查询/深读预算：
+- 时间/查询/深读预算：<本轮上限、累计已用量及各分支配额；恢复时继续累计>
 - 并行策略：
 - 必须暂停的条件：
 
@@ -306,7 +307,7 @@ artifacts:
 3. `question-map.md`
 4. 与 `current_focus` 有关的主张和来源
 5. 相关分支笔记
-6. `report.md` 中已完成部分
+6. `report.md` 中已完成部分（仅已生成并登记时读取）
 
 恢复后先检查截至日期、来源更新、scope version 和当前访问授权，再继续 `next_action`。状态文件中的历史授权不能代替当前权限。不要因为上下文丢失而重新搜索已完成分支。
 

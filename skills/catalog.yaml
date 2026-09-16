@@ -91,7 +91,7 @@ skills:
     invocation:
       user: true
       model: true
-    summary: 根据沟通对象、场景和目的重组短消息与口头话术。
+    summary: 根据事实要点、沟通对象、场景和目的起草或改写短消息与口头话术。
     uses: []
     routes_to: []
 

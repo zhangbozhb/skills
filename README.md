@@ -39,8 +39,8 @@ skills
 | [`tea-time-research`](skills/tea-time-research/SKILL.md) | 研究与学习 | 专项能力 | 按使用意图、topic 形态、目标读者和证据条件快速研究 |
 | [`deep-research`](skills/deep-research/SKILL.md) | 研究与学习 | 专项能力 | 对复杂问题执行多轮取证、反证、综合与主张级审计 |
 | [`goal-driven-workflow`](skills/goal-driven-workflow/SKILL.md) | 工作编排 | 编排器 | 跨阶段、跨会话、多轮实验或分支依赖任务 |
-| [`communication-rewriter`](skills/communication-rewriter/SKILL.md) | 沟通表达 | 专项能力 | 改写短消息、口头话术及其后续追改 |
-| [`agent-harness-review`](skills/agent-harness-review/SKILL.md) | Agent 工程 | 专项能力 | 设计或评审 agent/harness，识别可靠性、安全和成熟度缺口 |
+| [`communication-rewriter`](skills/communication-rewriter/SKILL.md) | 沟通表达 | 专项能力 | 根据事实要点起草或改写短消息、口头话术及其后续追改 |
+| [`agent-harness-review`](skills/agent-harness-review/SKILL.md) | Agent 工程 | 专项能力 | 建设评估或架构评审，识别 agent/harness 的可靠性、安全和成熟度缺口 |
 | [`skill-optimizer`](skills/skill-optimizer/SKILL.md) | Skill 工程 | 专项能力 | 审查和优化已有 Skill 的触发、执行与结构 |
 
 ## 组合关系
