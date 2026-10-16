@@ -1,23 +1,25 @@
 #!/bin/sh
 #
-# install.sh — 把当前目录发现的 Skill 安装到目标 skills 目录。
+# install.sh — 把当前目录发现的 Skill 安装到目标 skills 目录，或从中卸载。
 #
 # 每个 Skill 是一个至少包含 SKILL.md 的目录，可能还有 references/、
-# tests/ 等。安装即把整个目录平铺复制（或软链）到目标安装目录。
+# tests/ 等。安装时把整个目录平铺复制（或软链）到目标安装目录。
 #
 # 用法（在待安装 Skill 所在目录执行）:
 #   /path/to/install.sh                      安装全部 Skill 到默认目录 (~/.claude/skills)
 #   /path/to/install.sh deep-research ...    只安装指定的 Skill
 #   /path/to/install.sh --update ...        更新目标目录里已安装的 Skill 到最新版
 #                                           （不加名字=更新全部已安装；跳过内容未变化的）
+#   /path/to/install.sh --uninstall ...     从目标目录卸载 Skill
+#                                           （不加名字=卸载当前源中全部已安装项；默认逐项确认）
 #   /path/to/install.sh --list              列出当前目录可安装的 Skill
-#   /path/to/install.sh --agent NAME ...    安装/更新到指定 coding agent 的 skills 目录
-#                                           NAME: claude | codex | trae-cn（--list-agents 查看）
+#   /path/to/install.sh --agent NAME ...    安装/更新/卸载指定 coding agent 的 Skill
+#                                           NAME: agents | claude | codex | trae | trae-cn（--list-agents 查看）
 #   /path/to/install.sh --list-agents       列出内置的 agent 及其安装目录
 #   /path/to/install.sh --target DIR ...    指定安装目录（优先级最高）
 #   /path/to/install.sh --link ...          用软链接代替复制（开发时便于实时编辑）
 #   /path/to/install.sh --dry-run ...       只打印将要执行的操作，不落盘
-#   /path/to/install.sh --force ...         覆盖已存在的同名 Skill 时不再询问
+#   /path/to/install.sh --force ...         覆盖或卸载时不再询问
 #   /path/to/install.sh --help
 #
 # 源目录: 当前目录下有 skills/ 时使用 ./skills；当前目录本身包含
@@ -44,19 +46,22 @@ fi
 # 未知 agent 会报错并提示用 --target。
 agent_dir() {
   case "$1" in
+    agents)  printf '%s\n' "$HOME/.$1/skills" ;;
     claude)  printf '%s\n' "$HOME/.$1/skills" ;;
     codex)   printf '%s\n' "$HOME/.$1/skills" ;;
+    trae)    printf '%s\n' "$HOME/.$1/skills" ;;
     trae-cn) printf '%s\n' "$HOME/.$1/skills" ;;
     *)       return 1 ;;
   esac
 }
-KNOWN_AGENTS="claude codex trae-cn"
+KNOWN_AGENTS="agents claude codex trae trae-cn"
 
 # ---- 默认配置 --------------------------------------------------------------
 MODE="copy"        # copy | link
 DRY_RUN=0
 FORCE=0
 UPDATE=0
+UNINSTALL=0
 DO_LIST=0
 DO_LIST_AGENTS=0
 AGENT=""
@@ -71,7 +76,7 @@ err()   { printf 'ERROR: %s\n' "$*" >&2; }
 die()   { err "$*"; exit 1; }
 
 usage() {
-  sed -n '3,26p' "$SELF" | sed 's/^# \{0,1\}//'
+  sed -n '3,30p' "$SELF" | sed 's/^# \{0,1\}//'
   exit "${1:-0}"
 }
 
@@ -125,6 +130,7 @@ while [ $# -gt 0 ]; do
     --list)         DO_LIST=1; shift ;;
     --list-agents)  DO_LIST_AGENTS=1; shift ;;
     --update)       UPDATE=1; shift ;;
+    --uninstall)    UNINSTALL=1; shift ;;
     --link)         MODE="link"; shift ;;
     --dry-run)      DRY_RUN=1; shift ;;
     --force)        FORCE=1; shift ;;
@@ -174,10 +180,86 @@ if [ "$DO_LIST" -eq 1 ]; then
   exit 0
 fi
 
-# ---- 计算待安装列表 --------------------------------------------------------
+# ---- 校验操作组合 ----------------------------------------------------------
+if [ "$UNINSTALL" -eq 1 ] && [ "$UPDATE" -eq 1 ]; then
+  die "--uninstall 不能与 --update 同时使用"
+fi
+if [ "$UNINSTALL" -eq 1 ] && [ "$MODE" = link ]; then
+  die "--uninstall 不需要 --link"
+fi
+
+# ---- 发现源 Skill ----------------------------------------------------------
 ALL_SKILLS=$(discover_skills)
 [ -n "$ALL_SKILLS" ] || die "在 $SRC_DIR 下没有发现任何 Skill"
 
+# ---- 卸载 ------------------------------------------------------------------
+if [ "$UNINSTALL" -eq 1 ]; then
+  [ -d "$TARGET" ] || die "目标目录不存在，没有可卸载的 Skill: $TARGET"
+  TARGET_ABS=$(cd "$TARGET" && pwd -P)
+  TO_UNINSTALL=""
+
+  if [ "$SELECTED_COUNT" -eq 0 ]; then
+    while IFS= read -r have; do
+      [ -n "$have" ] || continue
+      if is_installed "$have" "$TARGET_ABS"; then
+        TO_UNINSTALL="${TO_UNINSTALL}${have}
+"
+      fi
+    done <<EOF
+$ALL_SKILLS
+EOF
+    [ -n "$TO_UNINSTALL" ] || die "目标目录里没有已安装的 Skill 可卸载: $TARGET_ABS"
+  else
+    while IFS= read -r want; do
+      [ -n "$want" ] || continue
+      if ! printf '%s\n' "$ALL_SKILLS" | grep -qxF "$want"; then
+        die "仓库内没有名为 '$want' 的 Skill（--list 查看全部）"
+      fi
+      if ! is_installed "$want" "$TARGET_ABS"; then
+        die "'$want' 尚未安装在 ${TARGET_ABS}，无法卸载"
+      fi
+      TO_UNINSTALL="${TO_UNINSTALL}${want}
+"
+    done <<EOF
+$SELECTED
+EOF
+  fi
+
+  printf 'Skill 卸载\n'
+  info "目标目录: $TARGET_ABS"
+  if [ "$DRY_RUN" -eq 1 ]; then info "方式:     删除  [dry-run]"; else info "方式:     删除"; fi
+  info "数量:     $(list_count "$TO_UNINSTALL")"
+  printf '\n'
+
+  removed=0
+  skipped=0
+  while IFS= read -r name; do
+    [ -n "$name" ] || continue
+    dst="$TARGET_ABS/$name"
+    if [ "$FORCE" -eq 0 ] && [ "$DRY_RUN" -eq 0 ]; then
+      printf '  卸载 %s? [y/N] ' "$name"
+      read -r ans 2>/dev/null </dev/tty || ans=""
+      case "$ans" in
+        y|Y|yes|YES) : ;;
+        *) info "跳过 $name"; skipped=$((skipped + 1)); continue ;;
+      esac
+    fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+      info "[dry-run] rm -rf $dst"
+    else
+      rm -rf "$dst"
+      info "已卸载 $name"
+    fi
+    removed=$((removed + 1))
+  done <<EOF
+$TO_UNINSTALL
+EOF
+
+  printf '\n完成: 卸载 %d 个, 跳过 %d 个 -> %s\n' "$removed" "$skipped" "$TARGET_ABS"
+  exit 0
+fi
+
+# ---- 计算待安装列表 --------------------------------------------------------
 TO_INSTALL=""
 if [ "$SELECTED_COUNT" -eq 0 ]; then
   if [ "$UPDATE" -eq 1 ]; then
